@@ -1,0 +1,15 @@
+{
+    "name": "maff/aoc-2019",
+    "description": "Advent of Code 2019",
+    "minimum-stability": "dev",
+    "license": "mit",
+    "authors": [
+        {
+            "name": "Ruud Bijnen",
+            "email": "r.bijnen@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "7.4.*"
+    }
+}
