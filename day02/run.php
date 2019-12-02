@@ -34,10 +34,31 @@ function run(array &$program) {
 $test = [1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50];
 assert(run($test) === 3500);
 
+$backup = $programs[0];
+
 // restore program
 $programs[0][1] = 12;
 $programs[0][2] = 2;
 
 run($programs[0]);
 
-echo 'Result: ', $programs[0][0];
+echo 'Result part1: ', $programs[0][0], PHP_EOL;
+
+$target = 19690720;
+
+foreach (range(0, 99) as $noun) {
+    foreach (range(0, 99) as $verb) {
+        $program = $backup;
+        $program[1] = $noun;
+        $program[2] = $verb;
+        $result = run($program);
+//        var_dump(compact('noun', 'verb', 'result'));
+        if ($result === $target) {
+            echo 'Result part2: ', ((100 * $noun) + $verb), PHP_EOL;
+            exit;
+        }
+    }
+}
+
+echo 'Failed to find output', PHP_EOL;
+exit(1);
