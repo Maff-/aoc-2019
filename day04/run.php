@@ -12,7 +12,7 @@ $valid = [];
 
 for ($current = $min; $current <= $max; $current++) {
     $digits = array_map('intval', str_split((string)$current));
-    $hasDouble = false;
+    $streak = [];
     foreach ($digits as $i => $digit) {
         if (($prev = $digits[$i - 1] ?? null) === null) {
             continue;
@@ -21,13 +21,12 @@ for ($current = $min; $current <= $max; $current++) {
             continue 2;
         }
         if ($digit === $prev) {
-            $hasDouble = true;
+            $streak[$digit] = isset($streak[$digit]) ? $streak[$digit] + 1 : 2;
         }
     }
-    if ($hasDouble) {
+    if ($streak && min($streak) === 2) {
         $valid[] = $current;
-        var_dump($current);
     }
 }
 
-echo 'Result part1: ', count($valid), PHP_EOL;
+echo 'Result part2: ', count($valid), PHP_EOL;
