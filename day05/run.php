@@ -4,25 +4,6 @@ declare(strict_types=1);
 $args = array_slice($_SERVER['argv'], 1);
 $inFile = $args[1] ?? 'input.txt';
 
-$opcodes = [
-    1 => [
-        'argc' => 4,
-        'fn' => fn (array &$program, array $args) => (
-        $program[$args[2][0]]
-            = ($args[0][1] ? $args[0][0] : $program[$args[0][0]])
-            + ($args[1][1] ? $args[1][0] : $program[$args[1][0]])
-        ),
-    ],
-    2 => [
-        'argc' => 4,
-        'fn' => fn (array &$program, array $args) => (
-        $program[$args[2][0]]
-            = ($args[0][1] ? $args[0][0] : $program[$args[0][0]])
-            * ($args[1][1] ? $args[1][0] : $program[$args[1][0]])
-        ),
-    ],
-];
-
 function run(array $program, int $input = 1): ?int
 {
     $output = null;
