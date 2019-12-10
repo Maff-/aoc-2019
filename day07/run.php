@@ -4,7 +4,15 @@ declare(strict_types=1);
 $args = array_slice($_SERVER['argv'], 1);
 $inFile = $args[1] ?? 'input.txt';
 
-function run(array $program, array $inputs): ?int
+class InputBuffer {
+    private array $buffer = [];
+    public function __construct(array $buffer = []) { $this->buffer = $buffer; }
+    public function push(int $value): void { $this->buffer[] = $value; }
+    public function next(): int { return array_shift($this->buffer); }
+    public function hasNext(): bool { return count($this->buffer) !== 0; }
+}
+
+function run(array $program, InputBuffer $inputs)
 {
     $output = null;
     $length = count($program);
@@ -27,10 +35,7 @@ function run(array $program, array $inputs): ?int
                 break;
             case 3: // input
                 $posResult = $program[$pos + 1];
-                if (count($inputs) === 0) {
-                    throw new RuntimeException('No inputs left');
-                }
-                $input = array_shift($inputs);
+                $input = $inputs->next();
                 $program[$posResult] = $input;
                 $pos += 2;
                 break;
@@ -38,6 +43,7 @@ function run(array $program, array $inputs): ?int
                 $modes = array_reverse(array_pad($modes, -1, 0));
                 $posResult = $program[$pos + 1];
                 $output = $modes[0] ? $posResult : $program[$posResult];
+                yield $output;
                 $pos += 2;
                 break;
             case 5: // jump-if-true
@@ -112,7 +118,7 @@ function maximizeThrust(array $phaseSettings, array $program, ?array &$maxPhaseS
     foreach ($phaseSettings as $phaseSetting) {
         $input = 0;
         foreach ($phaseSetting as $amp => $ampPhase) {
-            $input = run($program, [$ampPhase, $input]);
+            $input = getRunOutput(run($program, new InputBuffer([$ampPhase, $input])));
         }
         if ($input > $maxOutput) {
             $maxOutput = $input;
@@ -121,6 +127,49 @@ function maximizeThrust(array $phaseSettings, array $program, ?array &$maxPhaseS
     }
     return $maxOutput;
 }
+
+function maximizeThrust2(array $phaseSettings, array $program, ?array &$maxPhaseSetting = [])
+{
+    $maxOutput = null;
+    foreach ($phaseSettings as $phaseSetting) {
+        $ampCount = count($phaseSetting);
+        /** @var InputBuffer[] $inputBuffers */
+        $inputBuffers = array_map(fn(int $ampPhase) => new InputBuffer([$ampPhase]), $phaseSetting);
+        $inputBuffers[0]->push(0);
+        /** @var \Generator[] $amps */
+        $amps = array_map(fn(InputBuffer $ampInput) => run($program, $ampInput), $inputBuffers);
+        $ampsAdvance = array_fill_keys(array_keys($phaseSetting), false);
+        $output = null;
+        for ($i = 0; ; $i = ($i + 1) % $ampCount) {
+            $nextAmp = ($i + 1) % $ampCount;
+            if ($ampsAdvance[$i]) {
+                $amps[$i]->next();
+            }
+            if ($amps[$i]->valid()) {
+                $output = $amps[$i]->current();
+                $inputBuffers[$nextAmp]->push($output);
+                $ampsAdvance[$i] = true;
+            } else {
+                break;
+            }
+        }
+        if ($output > $maxOutput) {
+            $maxOutput = $output;
+            $maxPhaseSetting = $phaseSetting;
+        }
+        continue;
+    }
+    return $maxOutput;
+}
+
+function getRunOutput(\Generator $gen): int
+{
+    while ($gen->valid()) {
+        $gen->next();
+    }
+    return $gen->getReturn();
+}
+
 
 $phases = range(0, 4);
 
@@ -140,3 +189,17 @@ assert(($result = maximizeThrust($phaseSettings, $program)) === 65210, 'Expected
 
 $program = array_map('intval', explode(',', trim(file_get_contents($inFile))));
 echo 'Result part1: ', maximizeThrust($phaseSettings, $program), PHP_EOL;
+
+// --- part 2 --- //
+
+$phases = range(5, 9);
+$phaseSettings = [];
+heapPermutation($phases, $phaseSettings);
+
+$example = [3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1, 28, 1005, 28, 6, 99, 0, 0, 5];
+assert(maximizeThrust2($phaseSettings, $example) === 139629729);
+
+$example = [3, 52, 1001, 52, -5, 52, 3, 53, 1, 52, 56, 54, 1007, 54, 5, 55, 1005, 55, 26, 1001, 54, -5, 54, 1105, 1, 12, 1, 53, 54, 53, 1008, 54, 0, 55, 1001, 55, 1, 55, 2, 53, 55, 53, 4, 53, 1001, 56, -1, 56, 1005, 56, 6, 99, 0, 0, 0, 0, 10];
+assert(maximizeThrust2($phaseSettings, $example) === 18216);
+
+echo 'Result part1: ', maximizeThrust2($phaseSettings, $program), PHP_EOL;
