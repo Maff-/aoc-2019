@@ -167,27 +167,33 @@ $directions = [
     '<' => ['v', '^', [-1, 0]],
 ];
 
-$program = array_map('intval', explode(',', trim(file_get_contents($inFile))));
-$input = new InputBuffer([0]);
-$robot = run($program, $input);
+function paintPanels(array $program, int $startColor = 0): array
+{
+    global $directions;
 
-$panels = [];
-$paintCount = [];
-$x = $y = 0;
-$direction = '^';
-while ($robot->valid()) {
-    $color = $robot->current();
-    $panels[$x][$y] = $color;
-    $paintCount[$x][$y] ??= 0;
-    $paintCount[$x][$y]++;
-    $robot->next();
-    $turn = $robot->current();
-    $direction = $directions[$direction][$turn];
-    [$moveX, $moveY] = $directions[$direction][2];
-    $x += $moveX;
-    $y += $moveY;
-    $input->push($panels[$x][$y] ?? 0);
-    $robot->next();
+    $input = new InputBuffer([$startColor]);
+    $robot = run($program, $input);
+
+    $panels = [];
+    $x = $y = 0;
+    $direction = '^';
+    while ($robot->valid()) {
+        $color = $robot->current();
+        $panels[$x][$y] = $color;
+        $robot->next();
+        $turn = $robot->current();
+        $direction = $directions[$direction][$turn];
+        [$moveX, $moveY] = $directions[$direction][2];
+        $x += $moveX;
+        $y += $moveY;
+        $input->push($panels[$x][$y] ?? 0);
+        $robot->next();
+    }
+
+    return $panels;
 }
 
-echo 'Result part1: ', count(array_merge(...$paintCount)), PHP_EOL;
+$program = array_map('intval', explode(',', trim(file_get_contents($inFile))));
+
+echo 'Result part1: ', count(array_merge(...paintPanels($program, 0))), PHP_EOL;
+
