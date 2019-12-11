@@ -197,3 +197,17 @@ $program = array_map('intval', explode(',', trim(file_get_contents($inFile))));
 
 echo 'Result part1: ', count(array_merge(...paintPanels($program, 0))), PHP_EOL;
 
+$panels = paintPanels($program, 1);
+
+echo 'Result part2: ', PHP_EOL;
+
+$width = max(array_keys($panels)) + 1;
+$height = max(array_map('max', array_map('array_keys', $panels))) + 1;
+// NB: we assume xMin = yMin = 0
+
+for ($y = 0; $y < $height; $y++) {
+    for ($x = 0; $x < $width; $x++) {
+        echo ($panels[$x][$y] ?? 0) ? 'X' : ' ';
+    }
+    echo PHP_EOL;
+}
