@@ -169,3 +169,6 @@ $program = array_map('intval', explode(',', trim(file_get_contents($inFile))));
 
 //debugRun(run($program, new InputBuffer([1])));
 echo 'Result part1: ', getRunOutput(run($program, new InputBuffer([1]))), PHP_EOL;
+
+//debugRun(run($program, new InputBuffer([2])));
+echo 'Result part2: ', getRunOutput(run($program, new InputBuffer([2]))), PHP_EOL;
