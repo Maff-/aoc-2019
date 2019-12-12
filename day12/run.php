@@ -19,7 +19,7 @@ class Vec3
 
     public function energy(): int
     {
-        return array_sum(array_map('abs', (array)$this));
+        return abs($this->x) + abs($this->y) + abs($this->z);
     }
 
     public function __toString(): string
@@ -54,18 +54,22 @@ function step(array &$moons)
         for ($j = $i + 1; $j < $moonCount; $j++) {
             $a = $moons[$i];
             $b = $moons[$j];
-            foreach (['x', 'y', 'z'] as $axis) {
-                $change = $b->pos->$axis <=> $a->pos->$axis;
-                $a->vel->$axis += $change;
-                $b->vel->$axis -= $change;
-            }
+            $x = $b->pos->x <=> $a->pos->x;
+            $a->vel->x += $x;
+            $b->vel->x -= $x;
+            $y = $b->pos->y <=> $a->pos->y;
+            $a->vel->y += $y;
+            $b->vel->y -= $y;
+            $z = $b->pos->z <=> $a->pos->z;
+            $a->vel->z += $z;
+            $b->vel->z -= $z;
         }
     }
     // apply velocity
     foreach ($moons as $moon) {
-        foreach (['x', 'y', 'z'] as $axis) {
-            $moon->pos->$axis += $moon->vel->$axis;
-        }
+        $moon->pos->x += $moon->vel->x;
+        $moon->pos->y += $moon->vel->y;
+        $moon->pos->z += $moon->vel->z;
     }
 }
 
