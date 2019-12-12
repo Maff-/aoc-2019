@@ -45,25 +45,31 @@ class Moon
     }
 }
 
-/** @param Moon[] $moons */
-function step(array &$moons)
-{
+function pairMoons(array $moons): array {
     $moonCount = count($moons);
-    // apply gravity
+    $pairs = [];
     for ($i = 0; $i < $moonCount; $i++) {
         for ($j = $i + 1; $j < $moonCount; $j++) {
-            $a = $moons[$i];
-            $b = $moons[$j];
-            $x = $b->pos->x <=> $a->pos->x;
-            $a->vel->x += $x;
-            $b->vel->x -= $x;
-            $y = $b->pos->y <=> $a->pos->y;
-            $a->vel->y += $y;
-            $b->vel->y -= $y;
-            $z = $b->pos->z <=> $a->pos->z;
-            $a->vel->z += $z;
-            $b->vel->z -= $z;
+            $pairs[] = [$moons[$i], $moons[$j]];
         }
+    }
+    return $pairs;
+}
+
+/** @param Moon[] $moons */
+function step(array &$moons, array $pairs)
+{
+    // apply gravity
+    foreach ($pairs as [$a, $b]) {
+        $x = $b->pos->x <=> $a->pos->x;
+        $a->vel->x += $x;
+        $b->vel->x -= $x;
+        $y = $b->pos->y <=> $a->pos->y;
+        $a->vel->y += $y;
+        $b->vel->y -= $y;
+        $z = $b->pos->z <=> $a->pos->z;
+        $a->vel->z += $z;
+        $b->vel->z -= $z;
     }
     // apply velocity
     foreach ($moons as $moon) {
@@ -76,9 +82,10 @@ function step(array &$moons)
 /** @param Moon[] $moons */
 function run(array &$moons, int $steps = 1): void
 {
+    $pairs = pairMoons($moons);
 //    echo 'After 0 steps:', PHP_EOL, implode(PHP_EOL, $moons), PHP_EOL, PHP_EOL;
     for ($i = 0; $i < $steps; $i++) {
-        step($moons);
+        step($moons, $pairs);
 //        echo 'After ', $i + 1, ' steps:', PHP_EOL, implode(PHP_EOL, $moons), PHP_EOL, PHP_EOL;
     }
 }
