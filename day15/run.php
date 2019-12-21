@@ -189,10 +189,10 @@ function displayMap(array $map, ?int $minX = null, ?int $maxX = null, ?int $minY
 
     for ($y = $minY; $y <= $maxY; $y++) {
         for ($x = $minX; $x <= $maxX; $x++) {
-            if ($x === 0 && $y === 0) {
-                echo 'S';
-                continue;
-            }
+//            if ($x === 0 && $y === 0) {
+//                echo 'S';
+//                continue;
+//            }
             $tile = $map[$y][$x] ?? null;
             switch ($tile ?? -1) {
                 case -1:
@@ -249,7 +249,7 @@ function runProgram(array $program, array &$map = [], int $maxIterations = 10000
             case 2: // The repair droid has moved one step in the requested direction; its new position is the location of the oxygen system.
 //                echo "\033[2J\033[;H";
 //                displayMap($map);
-                echo 'Located oxygen system!! <x=', $targetX, ' y=', $targetY, '>', PHP_EOL;
+//                echo 'Located oxygen system!! <x=', $targetX, ' y=', $targetY, '>', PHP_EOL;
 //                return [$targetX, $targetY];
                 $x = $targetX;
                 $y = $targetY;
@@ -284,22 +284,60 @@ function runProgram(array $program, array &$map = [], int $maxIterations = 10000
 $program = array_map('intval', explode(',', trim(file_get_contents($inFile))));
 
 $combinedMap = [];
-
-for ($i = 0; $i < 20; $i++) {
-    try {
-        $map = [];
-        runProgram($program, $map);
-    } catch (\RuntimeException $e) {
-//    echo $e->getMessage();
-    }
-    foreach ($map as $y => $row) {
-        foreach($row as $x => $title) {
-            $combinedMap[$y][$x] ??= $title;
+$mapCacheFile = __DIR__ . '/map.dat';
+if (!file_exists($mapCacheFile) || !($mapData = file_get_contents($mapCacheFile))) {
+    for ($i = 0; $i < 20; $i++) {
+        try {
+            $map = [];
+            runProgram($program, $map);
+        } catch (\RuntimeException $e) {
+//            echo $e->getMessage();
+        }
+        foreach ($map as $y => $row) {
+            foreach($row as $x => $title) {
+                $combinedMap[$y][$x] ??= $title;
+            }
         }
     }
+    file_put_contents($mapCacheFile, serialize($combinedMap));
+    echo 'Saved map to ', $mapCacheFile, PHP_EOL;
+} else {
+    $combinedMap = unserialize($mapData, ['allowed_classes' => false]);
 }
+
 //var_dump($map);
 displayMap($combinedMap);
 
 echo 'Result part1: ', 'count in map :D', PHP_EOL;
 
+$map = $combinedMap;
+
+$steps = 0;
+while(true) {
+    $oxygenTiles = array_filter(array_map(fn($row) => array_filter($row, fn($tile) => $tile === 2), $map));
+    $tilesUpdated = false;
+    foreach ($oxygenTiles as $y => $row) {
+        foreach($row as $x => $title) {
+            foreach ($movements as [$moveX, $moveY]) {
+                $targetX = $x + $moveX;
+                $targetY = $y + $moveY;
+                $target = $map[$targetY][$targetX] ?? null;
+                if ($target === 1) {
+                    $map[$targetY][$targetX] = 2;
+                    $tilesUpdated = true;
+                }
+            }
+        }
+    }
+
+    if (!$tilesUpdated) {
+        break;
+    }
+
+    $steps++;
+//    echo "\033[2J\033[;H";
+//    echo $steps, PHP_EOL;
+//    displayMap($map);
+}
+
+echo 'Result part1: ', $steps, PHP_EOL;
