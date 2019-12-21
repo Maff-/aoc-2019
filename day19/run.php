@@ -205,18 +205,31 @@ function outputRun(Generator $gen): void
     }
 }
 
-$tiles = [0 => '.', 1 => '#'];
+$tiles = [0 => '.', 1 => '#', 9 => 'O'];
 
-function displayMap(array $map, ?int $minX = 0, ?int $maxX = null, ?int $minY = 0, ?int $maxY = null): void
+function displayMap(array $map, ?int $minX = 0, ?int $maxX = null, ?int $minY = 0, ?int $maxY = null, bool $displayCoords = true): void
 {
     global $tiles;
+
+    if (!$map) {
+        return;
+    }
 
     $minX ??= min(array_map(fn($row) => min(array_keys($row)), $map));
     $maxX ??= max(array_map(fn($row) => max(array_keys($row)), $map));
     $minY ??= min(array_keys($map));
     $maxY ??= max(array_keys($map));
 
+    $yCoordPad = strlen((string)$maxY);
+
+    if ($displayCoords) {
+        echo str_repeat(' ', $yCoordPad + 1), $minX, '->', PHP_EOL;
+    }
+
     for ($y = $minY; $y <= $maxY; $y++) {
+        if ($displayCoords) {
+            printf('%0' . $yCoordPad . 'd ', $y);
+        }
         for ($x = $minX; $x <= $maxX; $x++) {
             $tile = $map[$y][$x] ?? -1;
             echo $tiles[$tile] ?? ' ';
@@ -233,17 +246,22 @@ function discardOutput(\Generator $gen, int $length = 1): void
     }
 }
 
-function createMap(array $program, int $width = 50, int $height = 50): array
+function createMap(array $program, int $width = 50, int $height = 50, ?int $minX = 0, ?int $minY = 0, array &$map = [], bool $stopOnEdge = true): array
 {
-    $map = [];
     $prev = null;
 
     // NB: reading the challenge I assumed that we could use the same 'run' for each location, but that didn't work.
 
-    for ($y = 0; $y < $height; $y++) {
-        for ($x = 0; $x < $width; $x++) {
+    for ($y = $minY, $maxY = $minY + $height; $y < $maxY; $y++) {
+        for ($x = $minX, $maxX = $minX + $width; $x < $maxX; $x++) {
             $map[$y][$x] = $result = getRunOutput(run($program, new InputBuffer([$x, $y])));
+            if ($stopOnEdge && $prev !== null && $result !== $prev) {
+                // edge detected
+                break 1;
+            }
+            $prev = $result;
         }
+        $prev = null;
     }
 
     return $map;
@@ -256,3 +274,79 @@ $map = createMap($program, $width, $height);
 displayMap($map, 0, $width - 1, 0,  $height - 1);
 
 echo 'Result part1: ', array_sum(array_map('array_sum', $map)), PHP_EOL;
+
+//echo implode("\n", array_map(fn ($row) => implode("\t", $row), $map));
+
+// The Magic numbers below are for my specific input!! (these were determined with some spreadsheeting)
+// estimates
+$hor = 0.885842105;
+$ver = 0.79936;
+
+//$map = createMap($program, 200, 175, 400, 500);
+//displayMap($map, 400, null, 500, null);
+
+$scanWidth = 10; // even
+$halfScanWidth = (int)ceil($scanWidth / 2);
+
+$edges = [];
+$map = [];
+
+// NB: yMin/yMax are tuned for my specific input
+for ($y=2060; $y < 2200; $y++) {
+    $xVer = (int)round($y * ($ver / 1));
+    $xHor = (int)round($y * ($hor / 1));
+    createMap($program, $scanWidth, 1, max($xVer - $halfScanWidth, 0), $y, $map);
+    createMap($program, $scanWidth, 1, max($xHor - $halfScanWidth, 0), $y, $map);
+
+    $prev = $prevX = $horEdge = $verEdge = null;
+    foreach ($map[$y] as $x => $value) {
+        if ($prevX === $x - 1) {
+            if ($prev === 0 && $value === 1) {
+                // 'vertical' edge detected;
+                $verEdge = $x;
+            } elseif ($prev === 1 && $value === 0) {
+                // 'horizontal' edge detected;
+                $horEdge = $x - 1;
+            }
+        }
+        $prev = $value;
+        $prevX = $x;
+    }
+    if ($horEdge === null) {
+        displayMap($map, max($xVer - $halfScanWidth, 0), null, $y, $y);
+        throw new \RuntimeException('hor edge not found');
+    }
+    if ($verEdge === null) {
+        displayMap($map, max($xVer - $halfScanWidth, 0), null, $y, $y);
+        throw new \RuntimeException('ver edge not found');
+    }
+    $edges[$y] = [$verEdge, $horEdge];
+//    var_dump(compact('y', 'verEdge', 'horEdge'));
+//    echo $y, "\t", number_format($horEdge, 1, ',', ''), "\t", number_format($verEdge, 1, ',', ''), PHP_EOL;
+}
+
+
+foreach ($edges as $y => [$verEdge, $horEdge]) {
+    $x = $horEdge - 99;
+    $y100 = $y + 99;
+    if ($verEdge > $x) {
+        continue;
+    }
+    if (!isset($edges[$y100])) {
+        break;
+    }
+    $verEdge100 = $edges[$y100][0];
+    if ($verEdge100 <= $x) {
+        $result = (10000 * $x) + $y;
+//        var_dump(compact('x', 'y', 'result', 'verEdge', 'horEdge', 'y100', 'verEdge100'));
+        for ($_y=$y; $_y < $y + 100; $_y++) {
+            for ($_x=$x; $_x < $x + 100; $_x++) {
+                $map[$_y][$_x] = 9;
+            }
+        }
+        echo 'Result part2: ', $result, PHP_EOL;
+        break;
+    }
+}
+
+//displayMap($fooMap, $edges[array_key_first($edges)][0] - 2, $edges[array_key_last($edges)][1] + 2, null);
